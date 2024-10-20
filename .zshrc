@@ -6,7 +6,34 @@ fi
 # Fig pre block. Keep at the top of this file.
 [[ -f "$HOME/.fig/shell/zshrc.pre.zsh" ]] && builtin source "$HOME/.fig/shell/zshrc.pre.zsh"
 
-# chk
+ copydir() {
+   pwd | xclip -selection clipboard
+   echo "Copied: $(pwd)"
+ }
+
+zle -N copydir  # Define it as a Zsh widget
+bindkey '^e' copydir
+
+#git pushing dynamically 
+
+git_push() {
+  # Prompt for commit message (Zsh-friendly)
+  echo -n "Enter commit message: "
+  read commit_message
+
+  # Ensure commit message is not empty
+  if [[ -z "$commit_message" ]]; then
+    echo "Commit message cannot be empty. Aborting."
+    return 1
+  fi
+
+  # Execute the git commands sequentially
+  git add . && \
+  git commit -m "$commit_message" && \
+  git push -u origin main
+}
+zle -N git_push_widget git_push
+# bindkey '^Q' git_push_widget
 
 
 #fancy ctrl y 
@@ -24,27 +51,88 @@ bindkey '^Y' fancy-ctrl-y
 
 
 
+function init_git_project() {
+  echo "# chk" >> README.md
+  git init
+  git add .
+  git commit -m "first commit"
+  git branch -M main
+
+  # Prompt the user to enter the repository name
+  echo -n "Enter the repository name: "
+  read repo_name
+
+  # Create the GitHub repository with the entered name
+  gh repo create "$repo_name" --public --source=. --remote=origin --push
+}
+
+# Create a Zsh widget that calls the function
+zle -N init_git_project_widget init_git_project
+
+# Bind Ctrl+p to the widget
+bindkey '^P' init_git_project_widget
+
+
+#sj repo fzf-repo-manager
+# Function to run fzf-repo-manager from /mnt/fed/zshScript
+function fzf_repo_manager {
+    /mnt/fed/zshScript/fzf-repo-manager.sh
+}
+
+# Bind Ctrl+R to the function
+zle -N fzf_repo_manager  # Register the function as a Zsh widget
+bindkey '^U' fzf_repo_manager  # Bind Ctrl+R to it
+
+
+#fzf_repo_manager_level1
+
+# Function to run the fzf-repo-manager from /mnt/fed/zshScript
+function fzf_repo_manager_level1() {
+
+     /mnt/fed/zshScript/fzf-repo-manager-level1.sh
+}
+
+# Register the function as a ZLE widget
+zle -N fzf_repo_manager_level1
+
+# Bind the widget to Ctrl+Q
+bindkey '^Q' fzf_repo_manager_level1
+
+
+
+# Function to run the fzf-repo-manager from /mnt/fed/zshScript
+function fzf_repo_manager_level2() {
+    /mnt/fed/zshScript/fzf-repo-manager-level2.sh                                                          ─╯
+
+}
+
+# Register the function as a ZLE widget
+zle -N fzf_repo_manager_level2
+
+# Bind the widget to Ctrl+Q
+bindkey '^W' fzf_repo_manager_level2
+
 
 
 
 # Enable tmux autostart
-export ZSH_TMUX_AUTOSTART="true"
-export ZSH_TMUX_AUTOSTART_ONCE="false"  # Set to "true" if you want it to autostart only once per shell session
-
-# Autostart tmux when opening a new terminal
-if [[ -z "$TMUX" ]]; then
-  # Check if tmux autostart is enabled
-  if [[ "$ZSH_TMUX_AUTOSTART" == "true" ]]; then
-    # Actually don't autostart if multiple autostarts are disabled and already started
-    if [[ "$ZSH_TMUX_AUTOSTART_ONCE" == "false" || "$ZSH_TMUX_AUTOSTARTED" != "true" ]]; then
-      export ZSH_TMUX_AUTOSTARTED=true
-      tmux attach || tmux new
-    fi
-  fi
-fi
-
-
-
+ # export ZSH_TMUX_AUTOSTART="true"
+ # export ZSH_TMUX_AUTOSTART_ONCE="false"  # Set to "true" if you want it to autostart only once per shell session
+ #
+ # # Autostart tmux when opening a new terminal
+ # if [[ -z "$TMUX" ]]; then
+ #   # Check if tmux autostart is enabled
+ #   if [[ "$ZSH_TMUX_AUTOSTART" == "true" ]]; then
+ #     # Actually don't autostart if multiple autostarts are disabled and already started
+ #     if [[ "$ZSH_TMUX_AUTOSTART_ONCE" == "false" || "$ZSH_TMUX_AUTOSTARTED" != "true" ]]; then
+ #       export ZSH_TMUX_AUTOSTARTED=true
+ #       tmux attach || tmux new
+ #     fi
+ #   fi
+ # fi
+ #
+ #
+ #
 
 #   f you come from bash you might have to change your $PATH.
  export PATH=$HOME/bin:/usr/local/bin:$PATH
@@ -121,17 +209,21 @@ export PATH="/usr/bin/eza:$PATH"
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
 plugins=(git
-	#zsh-syntax-highlighting 
-        zsh-autosuggestions
+	# zsh-syntax-highlighting 
+  zsh-autosuggestions
 	#zsh-z
 	dirhistory	
 	sudo
 	web-search
-#	zsh-vi-mode
+ # zsh-vi-mode
 	copybuffer 
 	globalias
+  alias-finder
+  zsh-completions
 )
-
+# Only changing the escape key to `jk` in insert mode, we still
+# keep using the default keybindings `^[` in other modes
+# ZVM_VI_INSERT_ESCAPE_BINDKEY=jj
 
 source $ZSH/oh-my-zsh.sh
 # User configuration
@@ -152,22 +244,20 @@ source $ZSH/oh-my-zsh.sh
 # For a full list of active aliases, run `alias`.
 alias l="nvim ~/.config/nvim/init.lua"
 alias f="cd ~ && cd \$(find /mnt/fed/web2 -type d \( -name node_modules -o -name .git \) -prune -o -name '*'  -type d -print | fzf)"
-alias y="yazi"
+alias -g  y="yazi"
 alias ss="sudo systemctl restart keyd"
-alias n="nvim"
-alias h="nvim ~/.hyper.js"
+alias -g n="nvim"
 alias v='nvim ~/.zshrc'
 alias j='n ~/.config/i3/config'
 alias b="nvim /home/mdshahjalal5/.xmonad/xmonad.hs"
 alias s="systemctl suspend"
-alias p="pwd" 
 alias e='exec zsh'
 alias cc="code "
 
 alias t="tmux attach || tmux new"
 alias tt="nvim /home/sj/.tmux.conf"
 alias a="exit"
-alias u="/mnt/fed/web2"
+alias -g u="/mnt/fed/web2"
 
 alias w="/mnt/fed2/web2"
 alias ls="eza --color=always --long --git --no-filesize --icons=always --no-time --no-user --no-permissions"
@@ -176,14 +266,21 @@ alias c="/home/sj/.config/nvim"
 alias i='nocorrect sudo dnf install '
 alias r='nocorrect sudo dnf remove '
 alias p='systemctl --user restart pipewire && systemctl --user restart pipewire-pulse && systemctl --user daemon-reload'
-alias gi="git add . && git commit -m 'done' && git push -u origin main"
-alias d='nmcli device disconnect enp1s0'
-alias de='nmcli device connect enp1s0'
+alias gi="git_push"
+# alias d='nmcli device disconnect enp1s0'
+# alias de='nmcli device connect enp1s0'
 alias tl='tmux ls'
 alias tn='tmux new -s '
 alias ta='tmux attach -t '
 alias tk='tmux kill-session -t '
 alias alt="setxkbmap -option altwin:meta_alt"
+# alias fp="$(tmux ls | fzf | awk '{print $1}' | sed 's/://')"
+# alias ff ="$(  | fzf | awk '{print $1}' | sed 's/://')"
+alias gkk="git init && git add . && git commit -m 'first message' && git branch -M main"
+alias -g nano="nvim "
+alias gn='gh gd'
+alias cd="z"
+alias sg="yarn build  && surge dist"
 # custom function for customization 
 #enter will run the last used command 
 last_if_empty() {
@@ -196,7 +293,10 @@ last_if_empty() {
 }
 zle -N last_if_empty
 bindkey -M viins '^M' last_if_empty
-#zsh-z plugin 
+
+
+
+# zsh-z plugin 
 export PATH="$PATH:$HOME/.npm-global/bin"
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
@@ -224,7 +324,7 @@ autoload -U compinit && compinit
 # Set up fzf key bindings and fuzzy completion
 # setxkbmap -option "caps:swapescape"
 
-# fzf on Fedora fzf wasn't working by this stack overflows script working now 
+#;; fzf on Fedora fzf wasn't working by this stack overflows script working now 
 
 if command -v fzf >/dev/null 2>&1; then
     source /usr/share/fzf/shell/key-bindings.zsh
@@ -271,7 +371,22 @@ _fzf_comprun() {
   esac
 }
 #Search and execute commands from your history:
-export FZF_DEFAULT_OPTS="--height 80% --layout=reverse --border"
+ export FZF_DEFAULT_OPTS="--height 80% --layout=reverse --border"
+
+export FZF_DEFAULT_OPTS="
+  --height 80% --layout=reverse --border
+  --bind 'alt-g:execute-silent(google_search {+})'
+"
+
+
+#view with fzf any command 
+cf() {
+  $@ | fzf
+}
+
+
+
+
 source ~/fzf-git.sh/fzf-git.sh
 
 # the fuck added by josean 
@@ -279,8 +394,14 @@ source ~/fzf-git.sh/fzf-git.sh
 eval $(thefuck --alias)
 eval $(thefuck --alias fk)
 # ---- Zoxide (better cd) ----
-eval "$(zoxide init zsh)"
-alias cd="z"
+
+# unsetopt completealiases
+ eval "$(zoxide init zsh)"
+# eval "$(zoxide init zsh)"
+
+
+
+
 # cursor shape change for normal mode and insert mode for vi mode 
 function zle-keymap-select {
   if [[ ${KEYMAP} == vicmd ]] ||
